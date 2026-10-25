@@ -1,0 +1,2 @@
+ls missing-folder
+echo THIS_COMMAND_SHOULD_NOT_RUN

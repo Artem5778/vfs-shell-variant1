@@ -1,0 +1,5 @@
+ls
+cat readme.txt
+wc readme.txt
+help
+exit

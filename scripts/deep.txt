@@ -1,0 +1,10 @@
+ls
+cd level1
+ls
+cd level2
+ls
+cd level3
+ls
+cat file.txt
+cd /
+exit
