@@ -74,6 +74,33 @@ class VirtualFileSystem:
             node = node.children[part]
 
         return node
+    
+    def parent_and_name(self, path: str) -> tuple[Node, str]:
+        parts = list(self.resolve(path))
+
+        if not parts:
+            raise ValueError("Cannot replace the VFS root")
+
+        name = parts.pop()
+        parent_path = "/" + "/".join(parts)
+        parent = self.get_node(parent_path)
+
+        if not parent.is_dir:
+            raise NotADirectoryError(parent_path)
+
+        return parent, name
+
+    def mkdir(self, path: str) -> None:
+        parent, name = self.parent_and_name(path)
+
+        if name in parent.children:
+            raise FileExistsError(path)
+
+        parent.children[name] = Node(is_dir=True)
+
+    def chown(self, owner: str, path: str) -> None:
+        node = self.get_node(path)
+        node.owner = owner
 
 class Shell:
     def __init__(self, vfs: VirtualFileSystem):
@@ -113,10 +140,22 @@ class Shell:
                 self.cmd_cat(params)
             elif command == "wc":
                 self.cmd_wc(params)
+            elif command == "mkdir":
+                  self.cmd_mkdir(params)
+            elif command == "chown":
+                  self.cmd_chown(params)
+            elif command == "help":
+                 self.cmd_help(params)
             else:
                 print(f"Unknown command: {command}")
                 return False
-        except (FileNotFoundError, NotADirectoryError, ValueError) as error:
+            
+        except (
+            FileNotFoundError,
+            NotADirectoryError,
+            FileExistsError,
+            ValueError,
+        ) as error:
             print(f"Error: {error}")
             return False
 
@@ -190,6 +229,38 @@ class Shell:
             result = str(counts[mode])
 
         print(f"{result} {path}")
+
+    def cmd_mkdir(self, params: list[str]) -> None:
+        if len(params) != 1:
+            raise ValueError("Usage: mkdir PATH")
+
+        self.vfs.mkdir(params[0])
+
+    def cmd_chown(self, params: list[str]) -> None:
+        if len(params) != 2:
+            raise ValueError("Usage: chown OWNER PATH")
+
+        owner, path = params
+        self.vfs.chown(owner, path)
+        print(f"Owner of {path} set to {owner} (in memory)")
+
+    def cmd_help(self, params: list[str]) -> None:
+        if params:
+            raise ValueError("Usage: help")
+
+        commands = [
+            "ls [PATH] - list files and directories",
+            "cd [PATH] - change current directory",
+            "wc [-l|-w|-c] FILE - count lines, words, or bytes",
+            "echo [TEXT ...] - print text",
+            "cat FILE - print a text file",
+            "mkdir PATH - create a virtual directory",
+            "chown OWNER PATH - change virtual owner metadata",
+            "help - show this help",
+            "exit - quit the shell",
+        ]
+
+        print("\n".join(commands))
     
 VFS_NAME = "default-vfs"
 
